@@ -3,12 +3,21 @@
 [![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fmrxenginner%2FreVC%2Fbadge%3Fref%3Dmiami&style=flat)](https://actions-badge.atrox.dev/mrxenginner/reVC/goto?ref=miami)
 <a href="https://discord.gg/RFNbjsUMGg"><img src="https://img.shields.io/badge/discord-join-7289DA.svg?logo=discord&longCache=true&style=flat" /></a>
 
+
+## About this Fork
+This fork is forked from [Here](https://github.com/mrxenginner/reVC), Owner is mrxenginner. I sincerely appreciate their hard work and dedication - without their code, I would not have been able to complete my work.
+
+
+In this fork I mainly focus on improving the performance, fixing bugs, and making it better on macOS (especially on Apple Silicon Mac).
+At the same time, I will try my best to ensure you can still build it for other platforms.
+
 ## Intro
 
 In this repository you'll find the fully reversed source code for GTA VC ([miami](https://github.com/mrxenginner/reVC/tree/miami/) branch).
 
 It has been tested and works on Windows, Android, Linux, MacOS and FreeBSD, on x86, amd64, arm and arm64.\
 Rendering is handled either by original RenderWare (D3D8)
+
 or the reimplementation [librw](https://github.com/aap/librw) (D3D9, OpenGL 2.1 or above, OpenGL ES 2.0 or above).\
 Audio is done with MSS (using dlls from original GTA) or OpenAL.
 
