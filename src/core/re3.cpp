@@ -56,6 +56,11 @@
 #include <stdarg.h>
 #endif
 
+#ifdef __APPLE__
+#include <sys/utsname.h>
+#include <sys/sysctl.h>
+#endif
+
 #include <list>
 
 #ifdef RWLIBS
@@ -512,6 +517,14 @@ bool LoadINISettings()
 	ReadIniIfExists("Display", "Subtitles", &FrontEndMenuManager.m_PrefsShowSubtitles);
 	ReadIniIfExists("Graphics", "AspectRatio", &FrontEndMenuManager.m_PrefsUseWideScreen);
 	ReadIniIfExists("Graphics", "FrameLimiter", &FrontEndMenuManager.m_PrefsFrameLimiter);
+	ReadIniIfExists("Display", "FPSLimit", &FrontEndMenuManager.m_PrefsFPSLimit);
+	// 根据FPS限制设置maxFPS
+	switch(FrontEndMenuManager.m_PrefsFPSLimit) {
+		case 0: RsGlobal.maxFPS = 30; break;
+		case 1: RsGlobal.maxFPS = 60; break;
+		case 2: RsGlobal.maxFPS = 120; break;
+		default: RsGlobal.maxFPS = 60; FrontEndMenuManager.m_PrefsFPSLimit = 1; break;
+	}
 #ifdef LEGACY_MENU_OPTIONS
 	ReadIniIfExists("Graphics", "VSync", &FrontEndMenuManager.m_PrefsVsyncDisp);
 	ReadIniIfExists("Graphics", "Trails", &CMBlur::BlurOn);
@@ -625,6 +638,7 @@ void SaveINISettings()
 	StoreIni("Graphics", "Trails", CMBlur::BlurOn);
 #endif
 	StoreIni("Graphics", "FrameLimiter", FrontEndMenuManager.m_PrefsFrameLimiter);
+	StoreIni("Display", "FPSLimit", FrontEndMenuManager.m_PrefsFPSLimit);
 	StoreIni("General", "SkinFile", FrontEndMenuManager.m_PrefsSkinFile, 256);
 	StoreIni("Controller", "Method", FrontEndMenuManager.m_ControlMethod);
 	StoreIni("General", "Language", FrontEndMenuManager.m_PrefsLanguage);
@@ -889,6 +903,64 @@ void CTweakUInt16::AddDBG(const char *path) { DebugMenuAddVar     (m_pPath == NU
 void CTweakInt32::AddDBG (const char *path) { DebugMenuAddVar     (m_pPath == NULL ? path : m_pPath, m_pVarName, (int32_t *)m_pIntVar,  NULL, m_nStep, m_nLoawerBound, m_nUpperBound, NULL); }
 void CTweakUInt32::AddDBG(const char *path) { DebugMenuAddVar     (m_pPath == NULL ? path : m_pPath, m_pVarName, (uint32_t *)m_pIntVar, NULL, m_nStep, m_nLoawerBound, m_nUpperBound, NULL); }
 void CTweakFloat::AddDBG (const char *path) { DebugMenuAddVar     (m_pPath == NULL ? path : m_pPath, m_pVarName, (float *)m_pIntVar,    NULL, m_nStep, m_nLoawerBound, m_nUpperBound); }
+
+#ifdef __APPLE__
+void PrintMacOSSystemInfo()
+{
+	printf("==========================================\n");
+	printf("我正在运行于macOS上！\n");
+	printf("==========================================\n");
+	
+	// 获取系统信息
+	struct utsname systemInfo;
+	if (uname(&systemInfo) == 0) {
+		printf("系统信息:\n");
+		printf("  操作系统: %s\n", systemInfo.sysname);
+		printf("  系统版本: %s\n", systemInfo.release);
+		printf("  内核版本: %s\n", systemInfo.version);
+		printf("  机器类型: %s\n", systemInfo.machine);
+		printf("  主机名称: %s\n", systemInfo.nodename);
+	}
+	
+	// 获取CPU信息
+	char cpuBrand[256];
+	size_t size = sizeof(cpuBrand);
+	if (sysctlbyname("machdep.cpu.brand_string", &cpuBrand, &size, NULL, 0) == 0) {
+		printf("\nCPU信息:\n");
+		printf("  CPU型号: %s\n", cpuBrand);
+	}
+	
+	int cpuCount = 0;
+	size = sizeof(cpuCount);
+	if (sysctlbyname("hw.ncpu", &cpuCount, &size, NULL, 0) == 0) {
+		printf("  CPU核心数: %d\n", cpuCount);
+	}
+	
+	int64_t cpuFreq = 0;
+	size = sizeof(cpuFreq);
+	if (sysctlbyname("hw.cpufrequency", &cpuFreq, &size, NULL, 0) == 0) {
+		printf("  CPU频率: %.2f GHz\n", cpuFreq / 1000000000.0);
+	}
+	
+	// 获取内存信息
+	int64_t memSize = 0;
+	size = sizeof(memSize);
+	if (sysctlbyname("hw.memsize", &memSize, &size, NULL, 0) == 0) {
+		printf("\n内存信息:\n");
+		printf("  物理内存: %.2f GB\n", memSize / (1024.0 * 1024.0 * 1024.0));
+	}
+	
+	// 获取系统型号
+	char model[256];
+	size = sizeof(model);
+	if (sysctlbyname("hw.model", &model, &size, NULL, 0) == 0) {
+		printf("\n硬件信息:\n");
+		printf("  设备型号: %s\n", model);
+	}
+	
+	printf("==========================================\n\n");
+}
+#endif
 
 /*
 static const char *wt[] = {

@@ -865,11 +865,14 @@ psSelectDevice()
 			}
 		}
 
-		if(bestFsMode < 0){
+		if(bestFsMode < 0 && !FrontEndMenuManager.m_nPrefsWindowed){
 			printf("WARNING: Cannot find desired video mode, selecting device cancelled\n");
 			return FALSE;
 		}
-		GcurSelVM = bestFsMode;
+		if(bestFsMode >= 0)
+			GcurSelVM = bestFsMode;
+		else
+			GcurSelVM = bestWndMode;
 
 		FrontEndMenuManager.m_nDisplayVideoMode = GcurSelVM;
 		FrontEndMenuManager.m_nPrefsVideoMode = FrontEndMenuManager.m_nDisplayVideoMode;
@@ -1073,8 +1076,20 @@ void psPostRWinit(void)
 	_InputInitialiseJoys();
 	_InputInitialiseMouse(false);
 
-	if(!(vm.flags & rwVIDEOMODEEXCLUSIVE))
+	if(!(vm.flags & rwVIDEOMODEEXCLUSIVE)) {
 		glfwSetWindowSize(PSGLOBAL(window), RsGlobal.maximumWidth, RsGlobal.maximumHeight);
+		
+		// Center the window on screen for windowed mode
+		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+		if (monitor) {
+			const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+			if (mode) {
+				int xpos = (mode->width - RsGlobal.maximumWidth) / 2;
+				int ypos = (mode->height - RsGlobal.maximumHeight) / 2;
+				glfwSetWindowPos(PSGLOBAL(window), xpos, ypos);
+			}
+		}
+	}
 
 	// Make sure all keys are released
 	CPad::GetPad(0)->Clear(true);
@@ -1401,10 +1416,8 @@ void resizeCB(GLFWwindow* window, int width, int height) {
 	if (RwInitialised && height > 0 && width > 0) {
 		RwRect r;
 
-		// TODO fix artifacts of resizing with mouse
-		RsGlobal.maximumHeight = height;
-		RsGlobal.maximumWidth = width;
-
+		// On HiDPI/Retina displays, width/height here is framebuffer size (physical pixels)
+		// Use it directly for rendering - this ensures proper scaling on all displays
 		r.x = 0;
 		r.y = 0;
 		r.w = width;
@@ -1999,12 +2012,18 @@ main(int argc, char *argv[])
 	{
 		RwRect r;
 
+		// Get actual framebuffer size for proper HiDPI/Retina support
+		// This automatically adapts to any display scaling factor
+		int fbWidth, fbHeight;
+		glfwGetFramebufferSize(PSGLOBAL(window), &fbWidth, &fbHeight);
+
 		r.x = 0;
 		r.y = 0;
-		r.w = RsGlobal.maximumWidth;
-		r.h = RsGlobal.maximumHeight;
+		r.w = fbWidth;
+		r.h = fbHeight;
 
 		RsEventHandler(rsCAMERASIZE, &r);
+		// CameraSize will set RsGlobal to the framebuffer size automatically
 	}
 #ifdef _WIN32
 	SystemParametersInfo(SPI_SETPOWEROFFACTIVE, FALSE, nil, SPIF_SENDCHANGE);

@@ -104,6 +104,17 @@
 
 const char *filterNames[] = { "FEM_NON", "FEM_SIM", "FEM_NRM", "FEM_MOB" };
 const char *off_on[] = { "FEM_OFF", "FEM_ON" };
+const char *fpsLimitOptions[] = { "30 FPS", "60 FPS", "120 FPS" };
+
+void FPSLimitChanged(int8 before, int8 after) {
+	// 根据选择设置FPS限制
+	switch(after) {
+		case 0: RsGlobal.maxFPS = 30; break;
+		case 1: RsGlobal.maxFPS = 60; break;
+		case 2: RsGlobal.maxFPS = 120; break;
+		default: RsGlobal.maxFPS = 60; break;
+	}
+}
 
 void RestoreDefGraphics(int8 action) {
 	if (action != FEOPTION_ACTION_SELECT)
@@ -435,6 +446,7 @@ CMenuScreenCustom aScreens[] = {
 		MENUACTION_FRAMESYNC,	"FEM_VSC", {nil, SAVESLOT_NONE, MENUPAGE_DISPLAY_SETTINGS}, 0, 0, MENUALIGN_LEFT,
 #endif
 		MENUACTION_FRAMELIMIT,	"FEM_FRM", {nil, SAVESLOT_NONE, MENUPAGE_DISPLAY_SETTINGS}, 0, 0, MENUALIGN_LEFT,
+		MENUACTION_CFO_SELECT, "FED_FPS", { new CCFOSelect((int8*)&FrontEndMenuManager.m_PrefsFPSLimit, "Display", "FPSLimit", fpsLimitOptions, 3, false, FPSLimitChanged) }, 0, 0, MENUALIGN_LEFT,
 #if defined LEGACY_MENU_OPTIONS && !defined EXTENDED_COLOURFILTER
 		MENUACTION_TRAILS,		"FED_TRA", {nil, SAVESLOT_NONE, MENUPAGE_DISPLAY_SETTINGS}, 0, 0, MENUALIGN_LEFT,
 #endif
@@ -777,6 +789,7 @@ CMenuScreenCustom aScreens[] = {
 		MENUACTION_FRAMESYNC,	"FEM_VSC", {nil, SAVESLOT_NONE, MENUPAGE_GRAPHICS_SETTINGS}, 0, 0, MENUALIGN_LEFT,
 #endif
 		MENUACTION_FRAMELIMIT,	"FEM_FRM", { nil, SAVESLOT_NONE, MENUPAGE_GRAPHICS_SETTINGS }, 0, 0, MENUALIGN_LEFT,
+		MENUACTION_CFO_SELECT, "FED_FPS", { new CCFOSelect((int8*)&FrontEndMenuManager.m_PrefsFPSLimit, "Display", "FPSLimit", fpsLimitOptions, 3, false, FPSLimitChanged) }, 0, 0, MENUALIGN_LEFT,
 		MULTISAMPLING_SELECTOR
 		ISLAND_LOADING_SELECTOR
 		DUALPASS_SELECTOR

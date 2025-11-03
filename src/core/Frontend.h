@@ -610,6 +610,7 @@ public:
 	int8 m_PrefsVsync;
 	int8 m_PrefsVsyncDisp;
 	int8 m_PrefsFrameLimiter;
+	int8 m_PrefsFPSLimit; // 0=30, 1=60, 2=120
 	int8 m_nPrefsAudio3DProviderIndex;
 	int8 m_PrefsSpeakers;
 	int8 m_PrefsDMA;

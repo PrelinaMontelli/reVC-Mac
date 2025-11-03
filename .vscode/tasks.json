@@ -8,6 +8,44 @@
       "type": "shell"
     },
     {
+      "args": [
+        "-j5",
+        "config=debug_macosx-arm64-librw_gl3_glfw-oal",
+        "verbose=1"
+      ],
+      "command": "make",
+      "dependsOn": "Premake (macOS)",
+      "group": {
+        "isDefault": true,
+        "kind": "build"
+      },
+      "label": "Compile (Debug macOS arm64)",
+      "options": {
+        "cwd": "${workspaceFolder}/build"
+      },
+      "problemMatcher": "$gcc",
+      "type": "shell"
+    },
+    {
+      "args": [
+        "-j5",
+        "config=release_macosx-arm64-librw_gl3_glfw-oal",
+        "verbose=1"
+      ],
+      "command": "make",
+      "dependsOn": "Premake (macOS)",
+      "group": {
+        "isDefault": true,
+        "kind": "build"
+      },
+      "label": "Compile (Release macOS arm64)",
+      "options": {
+        "cwd": "${workspaceFolder}/build"
+      },
+      "problemMatcher": "$gcc",
+      "type": "shell"
+    },
+    {
       "args": ["--with-librw", "gmake2"],
       "command": "premake5",
       "label": "Premake (macOS)",

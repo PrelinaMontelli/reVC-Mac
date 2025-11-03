@@ -161,6 +161,12 @@ void MessageScreen(char *msg)
 bool
 CGame::InitialiseOnceBeforeRW(void)
 {
+#ifdef __APPLE__
+	// 声明外部函数
+	extern void PrintMacOSSystemInfo();
+	PrintMacOSSystemInfo();
+#endif
+	
 	CFileMgr::Initialise();
 	CdStreamInit(MAX_CDCHANNELS);
 	debug("size of matrix %d\n", sizeof(CMatrix));

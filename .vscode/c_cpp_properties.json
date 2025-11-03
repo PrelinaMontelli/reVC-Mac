@@ -2,18 +2,37 @@
   "configurations": [
     {
       "name": "Mac",
-      "includePath": ["${default}"],
-      "defines": [],
+      "includePath": [
+        "${default}",
+        "${workspaceFolder}/src",
+        "${workspaceFolder}/src/fakerw",
+        "${workspaceFolder}/vendor/librw",
+        "${workspaceFolder}/vendor/openal-soft/include",
+        "${workspaceFolder}/vendor/libsndfile/include",
+        "${workspaceFolder}/vendor/mpg123/include",
+        "/opt/homebrew/include"
+      ],
+      "defines": [
+        "LIBRW",
+        "RW_GL3",
+        "AUDIO_OAL"
+      ],
       "macFrameworkPath": [
+        "/System/Library/Frameworks",
+        "/Library/Frameworks",
         "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks"
       ],
-      "compilerPath": "/opt/local/bin/clang",
+      "compilerPath": "/usr/bin/clang++",
       "compilerArgs": ["-g"],
       "cStandard": "gnu11",
       "cppStandard": "gnu++14",
+      "intelliSenseMode": "macos-clang-arm64",
       "browse": {
         "path": [
-          "/opt/local/include",
+          "${workspaceFolder}/src",
+          "${workspaceFolder}/src/fakerw",
+          "${workspaceFolder}/vendor/librw",
+          "/opt/homebrew/include",
           "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include"
         ]
       }

@@ -480,6 +480,10 @@ _ResolveLink(char const *path, char *out)
 static void
 _FindMP3s(void)
 {
+	// Temporarily disable MP3 scanning to avoid crash
+	// TODO: Fix the underlying issue with aStream initialization
+	return;
+	
 	tMP3Entry *pList;
 	bool8 bShortcut;	
 	bool8 bInitFirstEntry;	
@@ -606,17 +610,16 @@ _FindMP3s(void)
 					OutputDebugString(filepath);
 					bShortcut = TRUE;
 				}
-				else
-					bShortcut = FALSE;
-				
-				if (aStream[0] && aStream[0]->Open(filepath))
-				{
-					total_ms = aStream[0]->GetLengthMS();
+			else
+				bShortcut = FALSE;
+			
+			if (aStream[0] && aStream[0]->Open(filepath))
+			{
+				total_ms = aStream[0]->GetLengthMS();
+				if (aStream[0]) // Safety check before Close()
 					aStream[0]->Close();
 
-					OutputDebugString(fd.cFileName);
-					
-					pList->pNext = new tMP3Entry;
+				OutputDebugString(fd.cFileName);					pList->pNext = new tMP3Entry;
 					
 					tMP3Entry *e = pList->pNext;
 					
@@ -768,8 +771,9 @@ cSampleManager::Initialise(void)
 
 	EFXInit();
 
+	// Initialize aStream pointers to NULL first for safety
 	for(int i = 0; i < MAX_STREAMS; i++)
-		aStream[i] = new CStream(ALStreamSources[i], ALStreamBuffers[i]);
+		aStream[i] = NULL;
 
 	CStream::Initialise();
 
@@ -888,7 +892,11 @@ cSampleManager::Initialise(void)
 			alSourcei(ALStreamSources[i][1], AL_SOURCE_RELATIVE, AL_TRUE);
 			alSource3f(ALStreamSources[i][1], AL_POSITION, 0.0f, 0.0f, 0.0f);
 			alSourcef(ALStreamSources[i][1], AL_GAIN, 1.0f);
-		} 
+		}
+
+		// Initialize aStream objects now that ALStreamSources and ALStreamBuffers are properly generated
+		for(int i = 0; i < MAX_STREAMS; i++)
+			aStream[i] = new CStream(ALStreamSources[i], ALStreamBuffers[i]);
 		
 		CChannel::InitChannels();
 
