@@ -47,13 +47,17 @@ CEntity *CAnimViewer::pTarget = nil;
 void
 CAnimViewer::Render(void) {
 	if (pTarget) {
-		if (pTarget) {
 #ifdef FIX_BUGS
-			if(pTarget->IsPed())
-				((CPed*)pTarget)->UpdateRpHAnim();
+		if(pTarget->IsPed())
+			((CPed*)pTarget)->UpdateRpHAnim();
 #endif
-			pTarget->Render();
-			CRenderer::RenderOneNonRoad(pTarget);
+		// Check if entity has valid RwObject before accessing clump
+		if (pTarget->m_rwObject) {
+			RpClump *clump = pTarget->GetClump();
+			if (clump) {
+				pTarget->Render();
+				CRenderer::RenderOneNonRoad(pTarget);
+			}
 		}
 	}
 }
@@ -278,6 +282,15 @@ CAnimViewer::Update(void)
 
 		if (!pTarget) {
 
+			// Verify model has valid RwObject before creating entity
+			if (!CModelInfo::GetModelInfo(modelId)->GetRwObject()) {
+				printf("[AnimViewer] Model %d has no RwObject, skipping to next\n", modelId);
+				// Auto-skip to next valid model
+				nextModelId = NextModelId(modelId, 1);
+				modelId = nextModelId;
+				return;
+			}
+
 			if (modelInfo->GetModelType() == MITYPE_VEHICLE) {
 
 				CVehicleModelInfo* veh = (CVehicleModelInfo*)modelInfo;
@@ -305,10 +318,46 @@ CAnimViewer::Update(void)
 				}
 				pTarget->SetStatus(STATUS_ABANDONED);
 			}
+			
+			// Final check: verify the created entity has a valid clump
+			if (!pTarget->GetClump()) {
+				printf("[AnimViewer] Created entity for model %d has no clump, deleting and skipping\n", modelId);
+				delete pTarget;
+				pTarget = nil;
+				nextModelId = NextModelId(modelId, 1);
+				modelId = nextModelId;
+				return;
+			}
+			
 			pTarget->SetPosition(0.0f, 0.0f, 0.0f);
 			CWorld::Add(pTarget);
 			TheCamera.TakeControl(pTarget, CCam::MODE_MODELVIEW, JUMP_CUT, CAMCONTROL_SCRIPT);
 		}
+		// Verify the clump is still valid after creation
+		// Must check m_rwObject before calling GetClump() to avoid crash
+		if (!pTarget->m_rwObject) {
+			printf("[AnimViewer] Model %d lost its RwObject after creation, cleaning up\n", modelId);
+			CWorld::Remove(pTarget);
+			if (pTarget)
+				delete pTarget;
+			pTarget = nil;
+			nextModelId = NextModelId(modelId, 1);
+			modelId = nextModelId;
+			return;
+		}
+		
+		RpClump *targetClump = pTarget->GetClump();
+		if (!targetClump) {
+			printf("[AnimViewer] Model %d has invalid clump, cleaning up\n", modelId);
+			CWorld::Remove(pTarget);
+			if (pTarget)
+				delete pTarget;
+			pTarget = nil;
+			nextModelId = NextModelId(modelId, 1);
+			modelId = nextModelId;
+			return;
+		}
+
 		if (pTarget->IsVehicle() || pTarget->IsPed() || pTarget->IsObject()) {
 			((CPhysical*)pTarget)->m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
 		}
@@ -329,12 +378,12 @@ CAnimViewer::Update(void)
 				CMessages::AddMessage(gUString, 1000, 0);
 
 			} else if (pad->GetCrossJustDown()) {
-				PlayAnimation(pTarget->GetClump(), animGroup, (AnimationId)animId);
+				PlayAnimation(targetClump, animGroup, (AnimationId)animId);
 				AsciiToUnicode("Animation restarted", gUString);
 				CMessages::AddMessage(gUString, 1000, 0);
 
 			} else if (pad->GetCircleJustDown()) {
-				PlayAnimation(pTarget->GetClump(), animGroup, ANIM_STD_IDLE);
+				PlayAnimation(targetClump, animGroup, ANIM_STD_IDLE);
 				AsciiToUnicode("Idle animation playing", gUString);
 				CMessages::AddMessage(gUString, 1000, 0);
 
@@ -343,7 +392,7 @@ CAnimViewer::Update(void)
 				if (animId < 0) {
 					animId = ANIM_STD_NUM - 1;
 				}
-				PlayAnimation(pTarget->GetClump(), animGroup, (AnimationId)animId);
+				PlayAnimation(targetClump, animGroup, (AnimationId)animId);
 
 				sprintf(gString, "Current anim: %d", animId);
 				AsciiToUnicode(gString, gUString);
@@ -351,7 +400,7 @@ CAnimViewer::Update(void)
 
 			} else if (pad->GetDPadDownJustDown()) {
 				animId = (animId == (ANIM_STD_NUM - 1) ? 0 : animId + 1);
-				PlayAnimation(pTarget->GetClump(), animGroup, (AnimationId)animId);
+				PlayAnimation(targetClump, animGroup, (AnimationId)animId);
 
 				sprintf(gString, "Current anim: %d", animId);
 				AsciiToUnicode(gString, gUString);
@@ -365,7 +414,7 @@ CAnimViewer::Update(void)
 				CMessages::AddMessage(gUString, 1000, 0);
 				// Originally it was GetPad(1)->LeftShoulder2
 			} else if (pad->NewState.Triangle) {
-				((CPedModelInfo *)CModelInfo::GetModelInfo(pTarget->GetModelIndex()))->AnimatePedColModelSkinned(pTarget->GetClump());
+				((CPedModelInfo *)CModelInfo::GetModelInfo(pTarget->GetModelIndex()))->AnimatePedColModelSkinned(targetClump);
 				AsciiToUnicode("Ped Col model will be animated as long as you hold the button", gUString);
 				CMessages::AddMessage(gUString, 100, 0);
 			}
@@ -389,17 +438,49 @@ CAnimViewer::Update(void)
 		}
 	}
 
-	if (pad->GetDPadLeftJustDown()) {
-		nextModelId = NextModelId(modelId, -1);
+	// Model navigation with keyboard modifiers
+	// Q+E: jump 100 models, E only: jump 10 models, None: jump 1 model
+	int jumpAmount = 1;
+	bool isEPressed = pad->NewKeyState.VK_KEYS['E'];
+	bool isQPressed = pad->NewKeyState.VK_KEYS['Q'];
+	
+	if (isQPressed && isEPressed) {
+		jumpAmount = 100;
+	} else if (isEPressed) {
+		jumpAmount = 10;
+	}
 
-		sprintf(gString, "Current model ID: %d", nextModelId);
+	if (pad->GetDPadLeftJustDown()) {
+		// Jump backwards by jumpAmount valid models
+		int stepsRemaining = jumpAmount;
+		nextModelId = modelId;
+		while (stepsRemaining > 0) {
+			nextModelId = NextModelId(nextModelId, -1);
+			stepsRemaining--;
+		}
+
+		if (jumpAmount > 1) {
+			sprintf(gString, "Current model ID: %d (-%d)", nextModelId, jumpAmount);
+		} else {
+			sprintf(gString, "Current model ID: %d", nextModelId);
+		}
 		AsciiToUnicode(gString, gUString);
 		CMessages::AddMessage(gUString, 1000, 0);
 
 	} else if (pad->GetDPadRightJustDown()) {
-		nextModelId = NextModelId(modelId, 1);
+		// Jump forwards by jumpAmount valid models
+		int stepsRemaining = jumpAmount;
+		nextModelId = modelId;
+		while (stepsRemaining > 0) {
+			nextModelId = NextModelId(nextModelId, 1);
+			stepsRemaining--;
+		}
 
-		sprintf(gString, "Current model ID: %d", nextModelId);
+		if (jumpAmount > 1) {
+			sprintf(gString, "Current model ID: %d (+%d)", nextModelId, jumpAmount);
+		} else {
+			sprintf(gString, "Current model ID: %d", nextModelId);
+		}
 		AsciiToUnicode(gString, gUString);
 		CMessages::AddMessage(gUString, 1000, 0);
 	}
